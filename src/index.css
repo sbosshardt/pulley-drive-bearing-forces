@@ -43,6 +43,39 @@ body {
   color: #4b5563;
 }
 
+.share-row {
+  margin-top: 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.share-btn {
+  border: 1px solid #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.share-btn:hover {
+  background: #dbeafe;
+}
+
+.share-note {
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.share-status {
+  margin: 0.45rem 0 0;
+  color: #1d4ed8;
+  font-size: 0.88rem;
+}
+
 .layout-grid,
 .output-grid,
 .tables-grid {
@@ -183,6 +216,23 @@ input[type='number'] {
 .force-label {
   fill: #111827;
   font-size: 0.82rem;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+.preload-text {
+  fill: #2563eb;
+}
+
+.transmission-text {
+  fill: #dc2626;
+}
+
+.total-text {
+  fill: #7c3aed;
 }
 
 .preload-arrow {
@@ -201,12 +251,6 @@ input[type='number'] {
   stroke: #7c3aed;
   fill: #7c3aed;
   stroke-width: 2.4;
-}
-
-.driven-total {
-  stroke: #7c3aed;
-  stroke-width: 2;
-  stroke-dasharray: 6 4;
 }
 
 .small-note {
