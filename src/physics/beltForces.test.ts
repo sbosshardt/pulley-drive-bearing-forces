@@ -1,27 +1,31 @@
 import { describe, expect, it } from 'vitest'
 import { calculateSystem } from './beltForces'
 
+const BASE_INPUTS = {
+  driverTorqueNm: 24,
+  driverRadiusM: 0.12,
+  drivenRadiusM: 0.12,
+  centerDistanceM: 0.8,
+  preloadN: 300,
+  efficiency: 0.95,
+  beltConfiguration: 'open' as const,
+}
+
 describe('calculateSystem', () => {
   it('converts torque to circumferential force', () => {
-    const result = calculateSystem({
-      driverTorqueNm: 24,
-      driverRadiusM: 0.12,
-      drivenRadiusM: 0.12,
-      centerDistanceM: 0.8,
-      preloadN: 300,
-    })
+    const result = calculateSystem(BASE_INPUTS)
 
     expect(result.belt.circumferentialForceN).toBeCloseTo(200, 8)
+    expect(result.belt.circumferentialForceSignedN).toBeCloseTo(200, 8)
     expect(result.belt.tightTensionN).toBeCloseTo(400, 8)
     expect(result.belt.slackTensionN).toBeCloseTo(200, 8)
   })
 
   it('flags preload-too-low condition when slack goes negative', () => {
     const result = calculateSystem({
+      ...BASE_INPUTS,
       driverTorqueNm: 100,
       driverRadiusM: 0.1,
-      drivenRadiusM: 0.1,
-      centerDistanceM: 0.7,
       preloadN: 200,
     })
 
@@ -30,11 +34,12 @@ describe('calculateSystem', () => {
 
   it('supports unequal pulley radii when center distance is valid', () => {
     const result = calculateSystem({
+      ...BASE_INPUTS,
       driverTorqueNm: 30,
       driverRadiusM: 0.15,
       drivenRadiusM: 0.08,
       centerDistanceM: 0.5,
-      preloadN: 250,
+      beltConfiguration: 'open',
     })
 
     expect(result.warnings.geometryInvalid).toBe(false)
@@ -44,11 +49,12 @@ describe('calculateSystem', () => {
 
   it('rejects invalid geometry where C <= |r_driver-r_driven|', () => {
     const result = calculateSystem({
+      ...BASE_INPUTS,
       driverTorqueNm: 20,
       driverRadiusM: 0.2,
       drivenRadiusM: 0.08,
       centerDistanceM: 0.12,
-      preloadN: 300,
+      beltConfiguration: 'open',
     })
 
     expect(result.warnings.geometryInvalid).toBe(true)
@@ -58,9 +64,9 @@ describe('calculateSystem', () => {
 
   it('creates opposite preload vectors on driver and driven pulleys', () => {
     const result = calculateSystem({
+      ...BASE_INPUTS,
       driverTorqueNm: 0,
       driverRadiusM: 0.1,
-      drivenRadiusM: 0.1,
       centerDistanceM: 0.6,
       preloadN: 180,
     })
@@ -77,5 +83,64 @@ describe('calculateSystem', () => {
       -result.drivenBearing.preloadOnly.y,
       8,
     )
+  })
+
+  it('supports crossed belt geometry with stricter center distance requirement', () => {
+    const valid = calculateSystem({
+      ...BASE_INPUTS,
+      beltConfiguration: 'crossed',
+      driverRadiusM: 0.2,
+      drivenRadiusM: 0.1,
+      centerDistanceM: 0.31,
+    })
+    const invalid = calculateSystem({
+      ...BASE_INPUTS,
+      beltConfiguration: 'crossed',
+      driverRadiusM: 0.2,
+      drivenRadiusM: 0.1,
+      centerDistanceM: 0.3,
+    })
+
+    expect(valid.warnings.geometryInvalid).toBe(false)
+    expect(invalid.warnings.geometryInvalid).toBe(true)
+  })
+
+  it('flips signed circumferential force for negative torque', () => {
+    const result = calculateSystem({
+      ...BASE_INPUTS,
+      driverTorqueNm: -24,
+    })
+
+    expect(result.belt.circumferentialForceN).toBeCloseTo(200, 8)
+    expect(result.belt.circumferentialForceSignedN).toBeCloseTo(-200, 8)
+    expect(result.rotation.driver).toBe('CW')
+  })
+
+  it('computes efficiency-adjusted driven torque and direction for open and crossed belts', () => {
+    const openResult = calculateSystem({
+      ...BASE_INPUTS,
+      driverTorqueNm: 30,
+      driverRadiusM: 0.1,
+      drivenRadiusM: 0.2,
+      efficiency: 0.9,
+      beltConfiguration: 'open',
+    })
+    const crossedResult = calculateSystem({
+      ...BASE_INPUTS,
+      driverTorqueNm: 30,
+      driverRadiusM: 0.1,
+      drivenRadiusM: 0.2,
+      efficiency: 0.9,
+      beltConfiguration: 'crossed',
+      centerDistanceM: 0.35,
+    })
+
+    expect(openResult.torque.drivenTorqueNm).toBeCloseTo(54, 8)
+    expect(openResult.rotation.driver).toBe('CCW')
+    expect(openResult.rotation.driven).toBe('CCW')
+
+    expect(crossedResult.torque.drivenTorqueNm).toBeCloseTo(-54, 8)
+    expect(crossedResult.rotation.driver).toBe('CCW')
+    expect(crossedResult.rotation.driven).toBe('CW')
   })
 })

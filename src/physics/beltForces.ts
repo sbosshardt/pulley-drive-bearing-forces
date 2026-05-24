@@ -1,7 +1,9 @@
 import type {
+  BeltConfiguration,
   BearingForces,
   BeltTensionState,
   CalculationResult,
+  RotationDirection,
   UserInputs,
   Vector2,
 } from '../types'
@@ -36,20 +38,57 @@ function computeBearingForces(
 
 function computeTensions(inputs: UserInputs): BeltTensionState {
   const safeRadius = inputs.driverRadiusM > 0 ? inputs.driverRadiusM : Number.NaN
-  const circumferentialForceN = inputs.driverTorqueNm / safeRadius
+  const circumferentialForceSignedN = inputs.driverTorqueNm / safeRadius
+  const circumferentialForceN = Math.abs(circumferentialForceSignedN)
   const tightTensionN = inputs.preloadN + circumferentialForceN / 2
   const slackTensionN = inputs.preloadN - circumferentialForceN / 2
 
   return {
     circumferentialForceN,
+    circumferentialForceSignedN,
     tightTensionN,
     slackTensionN,
   }
 }
 
+function rightSpanIsTight(driverTorqueNm: number, beltConfiguration: BeltConfiguration): boolean {
+  if (driverTorqueNm === 0) {
+    return true
+  }
+
+  if (beltConfiguration === 'crossed') {
+    return driverTorqueNm < 0
+  }
+
+  return driverTorqueNm > 0
+}
+
+function toRotationDirection(torqueNm: number): RotationDirection {
+  if (torqueNm > 0) {
+    return 'CCW'
+  }
+  if (torqueNm < 0) {
+    return 'CW'
+  }
+  return 'stationary'
+}
+
+function computeDrivenTorqueNm(inputs: UserInputs, tensions: BeltTensionState): number {
+  const boundedEfficiency = Math.min(1, Math.max(0, inputs.efficiency))
+  const directionFactor = inputs.beltConfiguration === 'open' ? 1 : -1
+  const driverDirection = Math.sign(inputs.driverTorqueNm)
+
+  if (driverDirection === 0) {
+    return 0
+  }
+
+  const drivenMagnitude = tensions.circumferentialForceN * inputs.drivenRadiusM * boundedEfficiency
+  return drivenMagnitude * driverDirection * directionFactor
+}
+
 export function calculateSystem(inputs: UserInputs): CalculationResult {
   const tensions = computeTensions(inputs)
-  const hasInvalidInputs =
+  const hasInvalidGeometryInputs =
     inputs.driverRadiusM <= 0 ||
     inputs.drivenRadiusM <= 0 ||
     inputs.centerDistanceM <= 0 ||
@@ -58,23 +97,43 @@ export function calculateSystem(inputs: UserInputs): CalculationResult {
     inputs.driverRadiusM,
     inputs.drivenRadiusM,
     inputs.centerDistanceM,
+    inputs.beltConfiguration,
   )
+  const drivenTorqueNm = computeDrivenTorqueNm(inputs, tensions)
+  const rotation = {
+    driver: toRotationDirection(inputs.driverTorqueNm),
+    driven: toRotationDirection(drivenTorqueNm),
+  }
+  const torque = {
+    driverTorqueNm: inputs.driverTorqueNm,
+    drivenTorqueNm,
+  }
 
   const warnings = {
-    geometryInvalid: hasInvalidInputs || geometry === null,
+    geometryInvalid: hasInvalidGeometryInputs || geometry === null,
     preloadTooLow: tensions.slackTensionN < 0,
+    efficiencyInvalid: inputs.efficiency <= 0 || inputs.efficiency > 1,
   }
 
   if (!geometry) {
     return {
       inputs,
       belt: tensions,
+      torque,
+      rotation,
       geometry: null,
       driverBearing: null,
       drivenBearing: null,
       warnings,
     }
   }
+
+  const rightTensionN = rightSpanIsTight(inputs.driverTorqueNm, inputs.beltConfiguration)
+    ? tensions.tightTensionN
+    : tensions.slackTensionN
+  const leftTensionN = rightSpanIsTight(inputs.driverTorqueNm, inputs.beltConfiguration)
+    ? tensions.slackTensionN
+    : tensions.tightTensionN
 
   const driverPreloadLoad = pulleyLoadFromSegments(
     geometry.rightSegmentUnit,
@@ -85,8 +144,8 @@ export function calculateSystem(inputs: UserInputs): CalculationResult {
   const driverTotalLoad = pulleyLoadFromSegments(
     geometry.rightSegmentUnit,
     geometry.leftSegmentUnit,
-    tensions.tightTensionN,
-    tensions.slackTensionN,
+    rightTensionN,
+    leftTensionN,
   )
 
   const drivenRightUnit = scaleVector(geometry.rightSegmentUnit, -1)
@@ -100,13 +159,15 @@ export function calculateSystem(inputs: UserInputs): CalculationResult {
   const drivenTotalLoad = pulleyLoadFromSegments(
     drivenRightUnit,
     drivenLeftUnit,
-    tensions.tightTensionN,
-    tensions.slackTensionN,
+    rightTensionN,
+    leftTensionN,
   )
 
   return {
     inputs,
     belt: tensions,
+    torque,
+    rotation,
     geometry,
     driverBearing: computeBearingForces(driverPreloadLoad, driverTotalLoad),
     drivenBearing: computeBearingForces(drivenPreloadLoad, drivenTotalLoad),

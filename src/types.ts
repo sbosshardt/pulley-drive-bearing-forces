@@ -1,9 +1,14 @@
+export type BeltConfiguration = 'open' | 'crossed'
+export type RotationDirection = 'CCW' | 'CW' | 'stationary'
+
 export interface UserInputs {
   driverTorqueNm: number
   driverRadiusM: number
   drivenRadiusM: number
   centerDistanceM: number
   preloadN: number
+  efficiency: number
+  beltConfiguration: BeltConfiguration
 }
 
 export interface Vector2 {
@@ -18,6 +23,7 @@ export interface ForceVector extends Vector2 {
 
 export interface BeltTensionState {
   circumferentialForceN: number
+  circumferentialForceSignedN: number
   tightTensionN: number
   slackTensionN: number
 }
@@ -42,11 +48,24 @@ export interface BearingForces {
 export interface CalculationWarnings {
   geometryInvalid: boolean
   preloadTooLow: boolean
+  efficiencyInvalid: boolean
+}
+
+export interface RotationState {
+  driver: RotationDirection
+  driven: RotationDirection
+}
+
+export interface TorqueState {
+  driverTorqueNm: number
+  drivenTorqueNm: number
 }
 
 export interface CalculationResult {
   inputs: UserInputs
   belt: BeltTensionState
+  torque: TorqueState
+  rotation: RotationState
   geometry: PulleyGeometry | null
   driverBearing: BearingForces | null
   drivenBearing: BearingForces | null

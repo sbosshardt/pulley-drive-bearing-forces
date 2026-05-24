@@ -1,12 +1,15 @@
 import type { UserInputs } from '../types'
 
+type NumericInputField = Exclude<keyof UserInputs, 'beltConfiguration'>
+
 interface InputPanelProps {
   inputs: UserInputs
-  onChange: (field: keyof UserInputs, value: number) => void
+  onChange: (field: NumericInputField, value: number) => void
+  onBeltConfigurationChange: (value: UserInputs['beltConfiguration']) => void
 }
 
 interface FieldDef {
-  key: keyof UserInputs
+  key: NumericInputField
   label: string
   symbol: string
   units: string
@@ -21,9 +24,9 @@ const FIELDS: FieldDef[] = [
     label: 'Driver Torque',
     symbol: 'T_driver',
     units: 'N·m',
-    min: 0,
+    min: -1000000,
     step: 0.1,
-    description: 'Input torque applied to the top pulley.',
+    description: 'Signed input torque at the top pulley (+CCW, -CW).',
   },
   {
     key: 'driverRadiusM',
@@ -53,6 +56,15 @@ const FIELDS: FieldDef[] = [
     description: 'Distance between pulley centerpoints.',
   },
   {
+    key: 'efficiency',
+    label: 'Drive Efficiency',
+    symbol: 'eta',
+    units: '-',
+    min: 0.01,
+    step: 0.01,
+    description: 'Mechanical efficiency from driver shaft torque to driven shaft torque (0 to 1).',
+  },
+  {
     key: 'preloadN',
     label: 'Preload Tension',
     symbol: 'F_preload',
@@ -63,11 +75,32 @@ const FIELDS: FieldDef[] = [
   },
 ]
 
-export function InputPanel({ inputs, onChange }: InputPanelProps) {
+export function InputPanel({
+  inputs,
+  onChange,
+  onBeltConfigurationChange,
+}: InputPanelProps) {
   return (
     <section className="panel">
       <h2>Inputs</h2>
       <p className="panel-subtitle">Engineering notation with user-friendly labels.</p>
+      <label className="field belt-config">
+        <span className="field-title">
+          Belt Configuration <em>(mode)</em>
+        </span>
+        <span className="field-desc">Open = same rotation direction, crossed = opposite direction.</span>
+        <div className="field-row">
+          <select
+            value={inputs.beltConfiguration}
+            onChange={(event) =>
+              onBeltConfigurationChange(event.target.value as UserInputs['beltConfiguration'])
+            }
+          >
+            <option value="open">Open</option>
+            <option value="crossed">Crossed</option>
+          </select>
+        </div>
+      </label>
       <div className="input-grid">
         {FIELDS.map((field) => (
           <label className="field" key={field.key}>

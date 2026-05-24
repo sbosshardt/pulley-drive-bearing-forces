@@ -165,6 +165,15 @@ input[type='number'] {
   font: inherit;
 }
 
+select {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #9ca3af;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  font: inherit;
+}
+
 .units {
   color: #374151;
   font-weight: 600;

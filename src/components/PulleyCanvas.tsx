@@ -237,7 +237,8 @@ export function PulleyCanvas({ result }: PulleyCanvasProps) {
       <section className="panel panel-canvas">
         <h2>Pulley Layout</h2>
         <div className="placeholder">
-          Geometry is currently invalid. Increase center distance so C &gt; |r_driver - r_driven|.
+          Geometry is currently invalid. Open belts require C &gt; |r_driver - r_driven|; crossed
+          belts require C &gt; r_driver + r_driven.
         </div>
       </section>
     )
@@ -458,7 +459,9 @@ export function PulleyCanvas({ result }: PulleyCanvasProps) {
         ))}
       </svg>
       <p className="small-note">
-        Coordinates use +x to the right, +y upward, and angles measured CCW from +x.
+        Mode: {result.inputs.beltConfiguration}. Driver/Driven rotation: {result.rotation.driver} /{' '}
+        {result.rotation.driven}. Coordinates use +x to the right, +y upward, and angles measured
+        CCW from +x.
       </p>
     </section>
   )
