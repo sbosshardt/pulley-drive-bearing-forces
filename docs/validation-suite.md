@@ -41,13 +41,15 @@ The automated suite in `src/physics/validationSuite.test.ts` is grouped into:
      - `C > r_driver + r_driven`
    - Efficiency warning for `eta <= 0` or `eta > 1`
 
-3. **Characterization checks (model behavior snapshots)**
-   - Scenario matrix that captures current computed bearing-direction outcomes when switching
-     belt configuration for:
-     - `r_driver=1, r_driven=2, C=5`
-     - `r_driver=2, r_driven=1, C=5`
-   - These are intentionally marked as characterization checks because they are geometry-model
-     outcomes, not direct closed-form textbook claims for bearing resultant direction.
+3. **Bearing-force direction checks (closed-form spot values)**
+   - Driver-bearing total force is checked against hand-derived closed-form
+     values for the scenario `T=4 Nm, F_pre=2 N, C=5 m, eta=1` with both
+     `r_driver=1, r_driven=2` and `r_driver=2, r_driven=1` in open and
+     crossed configurations.
+   - Sign-flip behavior of `driverBearing.total.x` when toggling open<->crossed
+     is asserted for these scenarios. With the corrected tight/slack span
+     assignment, x flips sign for `r_driver=1, r_driven=2` and does not flip
+     for `r_driver=2, r_driven=1`.
 
 ## Manual Validation Script
 

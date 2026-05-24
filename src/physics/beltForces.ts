@@ -1,5 +1,4 @@
 import type {
-  BeltConfiguration,
   BearingForces,
   BeltTensionState,
   CalculationResult,
@@ -51,13 +50,15 @@ function computeTensions(inputs: UserInputs): BeltTensionState {
   }
 }
 
-function rightSpanIsTight(driverTorqueNm: number, beltConfiguration: BeltConfiguration): boolean {
+function rightSpanIsTight(driverTorqueNm: number): boolean {
+  // The driver sits above the driven pulley (centers on the y-axis).
+  // For positive (CCW) driver torque, the surface speed at the right contact
+  // points such that the belt enters the driver's wrap on the right side; per
+  // capstan/Eytelwein analysis, the entry side of a driving pulley carries the
+  // higher tension. This relationship depends only on torque sign, not on
+  // whether the belt is open or crossed.
   if (driverTorqueNm === 0) {
     return true
-  }
-
-  if (beltConfiguration === 'crossed') {
-    return driverTorqueNm < 0
   }
 
   return driverTorqueNm > 0
@@ -128,12 +129,9 @@ export function calculateSystem(inputs: UserInputs): CalculationResult {
     }
   }
 
-  const rightTensionN = rightSpanIsTight(inputs.driverTorqueNm, inputs.beltConfiguration)
-    ? tensions.tightTensionN
-    : tensions.slackTensionN
-  const leftTensionN = rightSpanIsTight(inputs.driverTorqueNm, inputs.beltConfiguration)
-    ? tensions.slackTensionN
-    : tensions.tightTensionN
+  const rightIsTight = rightSpanIsTight(inputs.driverTorqueNm)
+  const rightTensionN = rightIsTight ? tensions.tightTensionN : tensions.slackTensionN
+  const leftTensionN = rightIsTight ? tensions.slackTensionN : tensions.tightTensionN
 
   const driverPreloadLoad = pulleyLoadFromSegments(
     geometry.rightSegmentUnit,
