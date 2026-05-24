@@ -2,6 +2,8 @@
 
 Client-side web app for understanding bearing loads in a two-pulley no-slip belt system.
 
+Live demo: [https://sbosshardt.github.io/pulley-drive-bearing-forces/](https://sbosshardt.github.io/pulley-drive-bearing-forces/)
+
 ## Model Scope
 
 - Driver pulley is the top pulley.
